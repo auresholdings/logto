@@ -1,6 +1,11 @@
 import { condString } from '@silverhand/essentials';
 
-export const searchKeysCamelCase = Object.freeze(['organizationId', 'appId', 'uiLocales'] as const);
+export const searchKeysCamelCase = Object.freeze([
+  'organizationId',
+  'appId',
+  'uiLocales',
+  'backUrl',
+] as const);
 
 type SearchKeysCamelCase = (typeof searchKeysCamelCase)[number];
 
@@ -18,6 +23,10 @@ export const searchKeys = Object.freeze({
    * E.g. `en` or `en-US` or `en-US en`.
    */
   uiLocales: 'ui_locales',
+  /**
+   * Custom back URL for the close button to redirect to.
+   */
+  backUrl: 'back_url',
 } satisfies Record<SearchKeysCamelCase, string>);
 
 export const handleSearchParametersData = () => {
@@ -39,7 +48,8 @@ export const handleSearchParametersData = () => {
         // Keep app_id in the URL for resuming sessions
         parameters.delete(key);
       }
-    } else if (key !== searchKeys.appId) {
+    } else if (key !== searchKeys.appId && key !== searchKeys.backUrl) {
+      // Don't remove back_url from sessionStorage on refresh (when it's not in URL params)
       sessionStorage.removeItem(key);
     }
   }
