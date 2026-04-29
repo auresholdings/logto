@@ -5,6 +5,7 @@ import {
   getEnv,
   getEnvAsStringArray,
   tryThat,
+  trySafe,
   yes,
   type Optional,
 } from '@silverhand/essentials';
