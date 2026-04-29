@@ -129,6 +129,7 @@ export const getTenantId = async (
       developmentTenantId,
       urlSet,
       adminUrlSet,
+      additionalEndpoints,
     },
     sharedPool,
   } = EnvSet;
@@ -136,6 +137,12 @@ export const getTenantId = async (
 
   if (adminUrlSet.deduplicated().some((endpoint) => isEndpointOf(url, endpoint))) {
     return [adminTenantId, false];
+  }
+
+  // Multi-domain OSS: treat configured additional endpoints as aliases of the default tenant
+  // with per-domain OIDC issuer (isCustomDomain=true triggers customEndpoint logic in init.ts)
+  if (additionalEndpoints.some((ep) => ep.origin === url.origin)) {
+    return [defaultTenantId, true];
   }
 
   if ((!isProduction || isIntegrationTest) && developmentTenantId) {
