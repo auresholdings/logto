@@ -7,7 +7,7 @@
 }
 
 .sectionTitle {
-  padding-left: _.unit(1);
+  padding-inline-start: _.unit(1);
   font: var(--font-label-2);
   color: var(--color-type-primary);
 }
@@ -46,8 +46,19 @@
   color: var(--color-type-primary);
 }
 
-.changeButton {
+.secondaryValue {
+  color: var(--color-type-secondary);
+}
+
+.actions {
   grid-column: 3;
+  display: flex;
+  align-items: center;
+  gap: _.unit(6);
+  flex-shrink: 0;
+}
+
+.changeButton {
   font: var(--font-label-2);
   color: var(--color-type-link);
   cursor: pointer;
@@ -61,9 +72,23 @@
   }
 }
 
+.removeButton {
+  font: var(--font-label-2);
+  color: var(--color-danger-default);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: _.unit(0.5) 0;
+  white-space: nowrap;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 :global(body.mobile) {
   .sectionTitle {
-    padding-left: 0;
+    padding-inline-start: 0;
   }
 
   .row {
@@ -93,10 +118,17 @@
     word-break: break-word;
   }
 
-  .changeButton {
-    flex-shrink: 0;
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: _.unit(4);
+  }
+
+  .changeButton,
+  .removeButton {
     padding: 0;
-    white-space: nowrap;
-    text-align: left;
+    white-space: normal;
+    text-align: start;
   }
 }

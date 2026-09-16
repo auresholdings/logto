@@ -12,6 +12,8 @@ const subscription = {
   enterprise_description: 'Para grandes equipos y empresas con requisitos de nivel empresarial.',
   admin_plan: 'Plan de administrador',
   dev_plan: 'Plan de desarrollo',
+  self_hosted_pro_plan: 'Plan Pro autoalojado',
+  self_hosted_enterprise_plan: 'Plan Empresa autoalojado',
   current_plan: 'Plan Actual',
   current_plan_description:
     'Aquí está tu plan actual. Puedes ver fácilmente el uso de tu plan, revisar tu próxima factura y hacer cambios en tu plan según sea necesario.',
@@ -45,6 +47,13 @@ const subscription = {
     },
   },
   quota_item,
+  cancel_feedback_modal: {
+    title: 'Lamentamos que se vaya',
+    description:
+      'Su suscripción ha sido cancelada. Sus comentarios nos ayudan a mejorar Logto. Leemos todas las respuestas.',
+    what_made_you_cancel: '¿Qué le llevó a cancelar?',
+    how_to_reconsider: '¿Qué podríamos hacer para que lo reconsidere?',
+  },
   downgrade_modal: {
     title: '¿Está seguro de que desea degradar?',
     description:
@@ -67,8 +76,8 @@ const subscription = {
   },
   upgrade_success: 'Actualizado con éxito a <name/>',
   downgrade_success: 'Degradado con éxito a <name/>',
-  subscription_check_timeout:
-    'La comprobación de suscripción expiró. Por favor, actualiza más tarde.',
+  subscription_check_pending:
+    'Tu pago se ha procesado. Configurar tu suscripción está tardando más de lo habitual.',
   no_subscription: 'Sin suscripción',
   usage,
   token_usage_notification: {

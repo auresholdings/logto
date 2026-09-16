@@ -14,6 +14,7 @@ import { useParams } from 'react-router-dom';
 import SubmitFormChangesActionBar from '@/components/SubmitFormChangesActionBar';
 import UnsavedChangesAlertModal from '@/components/UnsavedChangesAlertModal';
 import { isCloud } from '@/consts/env';
+import { SubscriptionDataContext } from '@/contexts/SubscriptionDataProvider';
 import ConfirmModal from '@/ds-components/ConfirmModal';
 import TabNav, { TabNavItem } from '@/ds-components/TabNav';
 import useApi from '@/hooks/use-api';
@@ -28,6 +29,7 @@ import usePreviewConfigs from '../hooks/use-preview-configs';
 import {
   SignInExperienceTab,
   convertAccountCenterToForm,
+  normalizeAccountCenterFieldsForSubmit,
   type SignInExperiencePageManagedData,
   type SignInExperienceForm,
   type AccountCenterFormValues,
@@ -70,7 +72,9 @@ function PageContent({ data, onSignInExperienceUpdated, onAccountCenterUpdated }
   const { updateConfigs } = useConfigs();
   const { getPathname } = useTenantPathname();
   const { isUploading, cancelUpload } = useContext(SignInExperienceContext);
+  const { currentSubscriptionQuota } = useContext(SubscriptionDataContext);
   const { isConnectorTypeEnabled, ready: isConnectorsReady } = useEnabledConnectorTypes();
+  const isCustomUiCspEnabled = isCloud && currentSubscriptionQuota.bringYourUiEnabled;
 
   const [dataToCompare, setDataToCompare] = useState<SignInExperiencePageManagedData>();
 
@@ -104,10 +108,16 @@ function PageContent({ data, onSignInExperienceUpdated, onAccountCenterUpdated }
         accountCenter.webauthnRelatedOrigins
       );
       const deleteAccountUrl = normalizeDeleteAccountUrl(accountCenter.deleteAccountUrl);
+      const fields = accountCenter.enabled
+        ? normalizeAccountCenterFieldsForSubmit(accountCenter.fields, data.accountCenter.fields)
+        : {};
 
       const updatedData = await api
         .patch('api/sign-in-exp', {
-          json: sieFormDataParser.toSignInExperience(formValues, { isCloud }),
+          json: sieFormDataParser.toSignInExperience(formValues, {
+            isCloud,
+            isCustomUiCspEnabled,
+          }),
         })
         .json<SignInExperience>();
 
@@ -116,10 +126,11 @@ function PageContent({ data, onSignInExperienceUpdated, onAccountCenterUpdated }
           json: {
             enabled: accountCenter.enabled,
             // Disable all fields when account center is disabled
-            fields: accountCenter.enabled ? accountCenter.fields : {},
+            fields,
             webauthnRelatedOrigins,
             deleteAccountUrl,
             customCss: accountCenter.customCss?.length ? accountCenter.customCss : null,
+            profileFields: accountCenter.profileFields,
           },
         })
         .json<AccountCenterConfig>();
@@ -137,7 +148,17 @@ function PageContent({ data, onSignInExperienceUpdated, onAccountCenterUpdated }
     } finally {
       setIsSaving(false);
     }
-  }, [api, getValues, onAccountCenterUpdated, onSignInExperienceUpdated, reset, t, updateConfigs]);
+  }, [
+    api,
+    data.accountCenter.fields,
+    getValues,
+    isCustomUiCspEnabled,
+    onAccountCenterUpdated,
+    onSignInExperienceUpdated,
+    reset,
+    t,
+    updateConfigs,
+  ]);
 
   const onSubmit = useCallback(
     async (formData: SignInExperienceForm) => {
@@ -146,8 +167,14 @@ function PageContent({ data, onSignInExperienceUpdated, onAccountCenterUpdated }
           return;
         }
 
-        const formatted = sieFormDataParser.toSignInExperience(formData, { isCloud });
-        const original = signInExperienceToUpdatedDataParser(data, { isCloud });
+        const formatted = sieFormDataParser.toSignInExperience(formData, {
+          isCloud,
+          isCustomUiCspEnabled,
+        });
+        const original = signInExperienceToUpdatedDataParser(data, {
+          isCloud,
+          isCustomUiCspEnabled,
+        });
 
         // Sign-in methods changed, need to show confirm modal first.
         if (!hasSignUpAndSignInConfigChanged(original, formatted)) {
@@ -160,7 +187,7 @@ function PageContent({ data, onSignInExperienceUpdated, onAccountCenterUpdated }
       });
       return handler(formData);
     },
-    [data, isSaving, saveData]
+    [data, isCustomUiCspEnabled, isSaving, saveData]
   );
 
   const onDiscard = useCallback(() => {

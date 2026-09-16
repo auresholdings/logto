@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import DelayedSuspenseFallback from '@/components/DelayedSuspenseFallback';
+import RedirectToAccountCenter from '@/components/RedirectToAccountCenter';
 import { EnterpriseSubscriptionTabs } from '@/consts';
 import ProtectedRoutes from '@/containers/ProtectedRoutes';
 import { GlobalAnonymousRoute, GlobalRoute } from '@/contexts/TenantsProvider';
@@ -11,10 +12,9 @@ import Callback from '@/pages/Callback';
 import CheckoutSuccessCallback from '@/pages/CheckoutSuccessCallback';
 import ExternalGoogleOneTapLanding from '@/pages/ExternalGoogleOneTapLanding';
 import OneTimeTokenLanding from '@/pages/OneTimeTokenLanding';
-import Profile from '@/pages/Profile';
-import HandleSocialCallback from '@/pages/Profile/containers/HandleSocialCallback';
 
 import styles from './AppRoutes.module.scss';
+import DeleteAccount from './pages/DeleteAccount';
 import EnterpriseSubscription from './pages/EnterpriseSubscription';
 import BillingHistory from './pages/EnterpriseSubscription/BillingHistory';
 import Subscription from './pages/EnterpriseSubscription/Subscription';
@@ -37,18 +37,18 @@ function AppRoutes() {
             path={GlobalAnonymousRoute.ExternalGoogleOneTapLanding}
             element={<ExternalGoogleOneTapLanding />}
           />
+          <Route
+            path={`${GlobalRoute.AcceptInvitation}/:invitationId`}
+            element={<AcceptInvitation />}
+          />
           <Route element={<ProtectedRoutes />}>
-            <Route
-              path={`${GlobalRoute.AcceptInvitation}/:invitationId`}
-              element={<AcceptInvitation />}
-            />
-            <Route path={GlobalRoute.Profile + '/*'} element={<Profile />} />
-            <Route path={GlobalRoute.HandleSocial} element={<HandleSocialCallback />} />
+            <Route path={GlobalRoute.Profile + '/*'} element={<RedirectToAccountCenter />} />
             <Route
               path={GlobalRoute.CheckoutSuccessCallback}
               element={<CheckoutSuccessCallback />}
             />
             <Route path={GlobalRoute.Onboarding + '/*'} element={<OnboardingApp />} />
+            <Route path={GlobalRoute.DeleteAccount} element={<DeleteAccount />} />
             <Route index element={<Main />} />
             <Route
               path={`${GlobalRoute.EnterpriseSubscription}/:logtoEnterpriseId`}

@@ -11,6 +11,8 @@ const subscription = {
   enterprise_description: '适用于大型团队和具有企业级需求的企业。',
   admin_plan: '管理员计划',
   dev_plan: '开发计划',
+  self_hosted_pro_plan: '自托管专业计划',
+  self_hosted_enterprise_plan: '自托管企业计划',
   current_plan: '当前计划',
   current_plan_description:
     '以下是您当前的计划。您可以轻松查看计划使用情况，检查即将到来的账单，并根据需要对计划进行更改。',
@@ -43,6 +45,13 @@ const subscription = {
     },
   },
   quota_item,
+  cancel_feedback_modal: {
+    title: '很遗憾您要离开',
+    description:
+      '您的订阅已取消。您的反馈将帮助我们把 Logto 做得更好。每一条反馈我们都会认真阅读。',
+    what_made_you_cancel: '是什么让您决定取消？',
+    how_to_reconsider: '我们做些什么能让您重新考虑？',
+  },
   downgrade_modal: {
     title: '确认要降级吗？',
     description:
@@ -64,7 +73,7 @@ const subscription = {
   },
   upgrade_success: '成功升级到 <name/>',
   downgrade_success: '成功降级到 <name/>',
-  subscription_check_timeout: '订阅检查超时，请稍后刷新。',
+  subscription_check_pending: '您的付款已处理。设置您的订阅比平时需要更长时间。',
   no_subscription: '无订阅',
   usage,
   token_usage_notification: {

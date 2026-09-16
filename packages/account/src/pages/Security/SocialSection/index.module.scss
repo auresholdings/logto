@@ -7,7 +7,7 @@
 }
 
 .sectionTitle {
-  padding-left: _.unit(1);
+  padding-inline-start: _.unit(1);
   font: var(--font-label-2);
   color: var(--color-type-primary);
 }
@@ -32,19 +32,12 @@
   }
 }
 
-.topLine {
-  display: contents;
-}
-
-// Icon and name share the same grid cell so the name slot stays within 200px,
-// matching the original non-grid layout. Name offsets via padding to sit after the icon.
-.iconWrap {
+.connectorInfo {
   grid-column: 1;
-  grid-row: 1;
   display: flex;
   align-items: center;
-  justify-self: start;
-  flex-shrink: 0;
+  gap: _.unit(4);
+  min-width: 0;
 }
 
 .connectorLogo {
@@ -55,12 +48,12 @@
 }
 
 .connectorName {
-  grid-column: 1;
-  grid-row: 1;
   min-width: 0;
-  padding-left: calc(20px + #{_.unit(4)});
   font: var(--font-label-2);
   color: var(--color-type-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .identityInfo {
@@ -128,31 +121,24 @@
   color: var(--color-danger-default);
 }
 
-:global(body.mobile) {
+@mixin mobile-layout {
   .sectionTitle {
-    padding-left: 0;
+    padding-inline-start: 0;
   }
 
   .row {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     min-height: 0;
-    flex-direction: column;
-    align-items: stretch;
-    gap: _.unit(1);
+    align-items: center;
+    gap: _.unit(2) _.unit(3);
     padding: _.unit(4);
   }
 
-  .topLine {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: _.unit(3);
-    width: 100%;
-  }
-
   .actions {
-    display: flex;
-    flex-wrap: wrap;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
     justify-content: flex-end;
   }
 
@@ -163,13 +149,26 @@
     width: 100%;
     overflow-wrap: anywhere;
     word-break: break-word;
+    white-space: normal;
+  }
+
+  .connectorInfo {
+    display: contents;
+  }
+
+  .connectorLogo {
+    grid-column: 1;
+    grid-row: 1;
   }
 
   .connectorName {
-    padding-left: 0;
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 
   .identityInfo {
+    grid-column: 1 / -1;
+    grid-row: 3;
     width: 100%;
     align-items: flex-start;
   }
@@ -177,6 +176,16 @@
   .actionButton {
     padding: 0;
     white-space: normal;
-    text-align: left;
+    text-align: start;
+  }
+}
+
+:global(body.mobile) {
+  @include mobile-layout;
+}
+
+:global(body.desktop) {
+  @media only screen and (max-width: 800px) {
+    @include mobile-layout;
   }
 }

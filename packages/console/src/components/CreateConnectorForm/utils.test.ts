@@ -4,43 +4,33 @@ import type { TFuncKey } from 'i18next';
 import { getEmailConnectorUpsellCopyKeys, shouldShowEmailConnectorUpsellBanner } from './utils';
 
 describe('shouldShowEmailConnectorUpsellBanner', () => {
-  test('returns true only for OSS email connectors with dev features enabled', () => {
+  test('returns true for OSS email connectors', () => {
     expect(
       shouldShowEmailConnectorUpsellBanner({
         type: ConnectorType.Email,
         isCloud: false,
-        isDevFeaturesEnabled: true,
       })
     ).toBe(true);
   });
 
-  test('returns false for cloud, non-email, or disabled dev-features cases', () => {
+  test('returns false for cloud or non-email cases', () => {
     expect(
       shouldShowEmailConnectorUpsellBanner({
         type: ConnectorType.Email,
         isCloud: true,
-        isDevFeaturesEnabled: true,
-      })
-    ).toBe(false);
-    expect(
-      shouldShowEmailConnectorUpsellBanner({
-        type: ConnectorType.Email,
-        isCloud: false,
-        isDevFeaturesEnabled: false,
       })
     ).toBe(false);
     expect(
       shouldShowEmailConnectorUpsellBanner({
         type: ConnectorType.Sms,
         isCloud: false,
-        isDevFeaturesEnabled: true,
       })
     ).toBe(false);
   });
 });
 
 describe('getEmailConnectorUpsellCopyKeys', () => {
-  test('uses dedicated i18n keys for the OSS email upsell banner copy', () => {
+  test('keeps Cloud copy primary and adds the self-hosted plans secondary action', () => {
     const copyKeys = getEmailConnectorUpsellCopyKeys();
     const titleKey: TFuncKey<'translation', 'admin_console'> = copyKeys.title;
     const descriptionKey: TFuncKey<'translation', 'admin_console'> = copyKeys.description;
@@ -51,5 +41,6 @@ describe('getEmailConnectorUpsellCopyKeys', () => {
       description: 'connectors.create_form.email_connector_upsell.description',
       action: 'upsell.try_with_product_name',
     });
+    expect(copyKeys.secondaryAction).toBe('upsell.explore_self_hosted_plans');
   });
 });

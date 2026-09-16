@@ -1,9 +1,9 @@
 import ExternalLinkIcon from '@/assets/icons/external-link.svg?react';
 import MembersBg from '@/assets/icons/members-bg.svg?url';
-import { logtoCloudConsoleUrl } from '@/consts';
 import Button from '@/ds-components/Button';
 import Card from '@/ds-components/Card';
 import DynamicT from '@/ds-components/DynamicT';
+import { openSelfHostedPlansUpsell, ossUpsellEntries } from '@/utils/oss-upsell';
 
 import { getOssTenantMembersUpsellCopyKeys } from '../utils';
 
@@ -30,7 +30,8 @@ function Members() {
           title={copyKeys.action}
           trailingIcon={<ExternalLinkIcon />}
           onClick={() => {
-            window.open(logtoCloudConsoleUrl, '_blank', 'noopener,noreferrer');
+            const entry = ossUpsellEntries.tenantSettingsMembersOssUpsell;
+            openSelfHostedPlansUpsell({ entry });
           }}
         />
       </div>
