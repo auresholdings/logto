@@ -12,7 +12,7 @@ import * as s from 'superstruct';
 
 import { type IdentifierInputValue } from '@/shared/components/InputFields/SmartInputField';
 
-import { UserFlow } from '.';
+import { UserFlow, UserMfaFlow } from '.';
 
 export const userFlowGuard = s.enums([
   UserFlow.SignIn,
@@ -74,7 +74,7 @@ const mfaFactorEnumValues = [
   MfaFactor.PhoneVerificationCode,
 ] as const;
 
-export const mfaErrorDataGuard = s.object({
+const mfaErrorDataShape = {
   availableFactors: mfaFactorsGuard,
   skippable: s.optional(s.boolean()),
   maskedIdentifiers: s.optional(s.record(s.enums(mfaFactorEnumValues), s.string())),
@@ -82,11 +82,33 @@ export const mfaErrorDataGuard = s.object({
   suggestion: s.optional(s.boolean()),
   // Whether the current WebAuthn factor is used as a sign-in passkey.
   isWebAuthnUsedAsSignInPasskey: s.optional(s.boolean()),
+};
+
+export const mfaErrorDataGuard = s.object(mfaErrorDataShape);
+
+export const mfaFlowStateGuard = s.object(mfaErrorDataShape);
+
+export const trustedDeviceOptInErrorDataGuard = s.object({
+  durationDays: s.number(),
 });
 
-export const mfaFlowStateGuard = mfaErrorDataGuard;
+export const trustedDeviceOptInStateGuard = s.assign(
+  trustedDeviceOptInErrorDataGuard,
+  s.object({
+    interactionEvent: s.enums([InteractionEvent.SignIn, InteractionEvent.Register]),
+  })
+);
+
+export const parseGuard = <T, S>(value: unknown, struct: s.Struct<T, S>) =>
+  s.validate(value, struct, { coerce: true, mask: true })[1];
 
 export type MfaFlowState = s.Infer<typeof mfaFlowStateGuard>;
+export type TrustedDeviceOptInErrorData = s.Infer<typeof trustedDeviceOptInErrorDataGuard>;
+
+export const mfaBindingVerificationCodeStateGuard = s.type({
+  flow: s.literal(UserMfaFlow.MfaBinding),
+  mfaFlowState: mfaFlowStateGuard,
+});
 
 export const totpBindingStateGuard = s.assign(
   s.object({

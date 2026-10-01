@@ -13,6 +13,7 @@ import type {
   PersonalAccessToken,
   Role,
   SessionGrantRevokeTarget,
+  TrustedDeviceResponse,
   User,
   UserProfileResponse,
   UserSsoIdentity,
@@ -92,7 +93,16 @@ export const updateUserPassword = async (userId: string, password: string) =>
         password,
       },
     })
-    .json<User>();
+    .json<UserProfileResponse>();
+
+export const expireUserPassword = async (userId: string) =>
+  authedAdminApi
+    .patch(`users/${userId}/password/expiration`, {
+      json: {
+        isExpired: true,
+      },
+    })
+    .json<UserProfileResponse>();
 
 export const deleteUserIdentity = async (userId: string, connectorTarget: string) =>
   authedAdminApi.delete(`users/${userId}/identities/${connectorTarget}`);
@@ -208,6 +218,12 @@ export const updatePersonalAccessTokenLegacy = async (
       json: body,
     })
     .json<PersonalAccessToken>();
+
+export const getUserTrustedDevices = async (userId: string) =>
+  authedAdminApi.get(`users/${userId}/trusted-devices`).json<TrustedDeviceResponse[]>();
+
+export const deleteUserTrustedDevice = async (userId: string, trustedDeviceId: string) =>
+  authedAdminApi.delete(`users/${userId}/trusted-devices/${trustedDeviceId}`);
 
 export const getUserIdentity = async (
   userId: string,

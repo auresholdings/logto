@@ -21,7 +21,6 @@ const WebAuthnVerification = () => {
   const [, webAuthnState] = validate(state, webAuthnStateGuard);
   const { verificationIdsMap } = useContext(UserInteractionContext);
   const verificationId = verificationIdsMap[VerificationType.WebAuthn];
-
   const handleWebAuthn = useWebAuthnOperation();
   const [isVerifying, setIsVerifying] = useState(false);
 
@@ -29,7 +28,7 @@ const WebAuthnVerification = () => {
     return <ErrorPage title="error.invalid_session" />;
   }
 
-  const { options, availableFactors, skippable } = webAuthnState;
+  const { options, ...flowState } = webAuthnState;
 
   if (!isWebAuthnOptions(options)) {
     return <ErrorPage title="error.invalid_session" />;
@@ -52,10 +51,7 @@ const WebAuthnVerification = () => {
           }}
         />
       </SectionLayout>
-      <SwitchMfaFactorsLink
-        flow={UserMfaFlow.MfaVerification}
-        flowState={{ availableFactors, skippable }}
-      />
+      <SwitchMfaFactorsLink flow={UserMfaFlow.MfaVerification} flowState={flowState} />
     </SecondaryPageLayout>
   );
 };

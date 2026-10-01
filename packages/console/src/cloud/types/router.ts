@@ -1,13 +1,20 @@
 import type router from '@logto/cloud/routes';
-import { type tenantAuthRouter } from '@logto/cloud/routes';
+import { type emailLogsRouter, type tenantAuthRouter } from '@logto/cloud/routes';
 import { type GuardedResponse, type RouterRoutes } from '@withtyped/client';
 
 type GetRoutes = RouterRoutes<typeof router>['get'];
 type GetTenantAuthRoutes = RouterRoutes<typeof tenantAuthRouter>['get'];
+type GetEmailLogsRoutes = RouterRoutes<typeof emailLogsRouter>['get'];
+
+/** The paginated hosted-email log page returned by the cloud email-logs endpoint. */
+export type TenantEmailLogsResponse = GuardedResponse<
+  GetEmailLogsRoutes['/api/tenants/:tenantId/email-logs']
+>;
+
+/** A single hosted-email log entry (redacted by the endpoint's response whitelist). */
+export type TenantEmailLog = TenantEmailLogsResponse['logs'][number];
 
 export type GetArrayElementType<T> = T extends Array<infer U> ? U : never;
-
-export type LogtoSkuResponse = GetArrayElementType<GuardedResponse<GetRoutes['/api/skus']>>;
 
 export type Subscription = GuardedResponse<GetRoutes['/api/tenants/:tenantId/subscription']>;
 
@@ -23,19 +30,34 @@ export type SubscriptionUsageResponse = GuardedResponse<
 
 export type SubscriptionQuota = Omit<
   SubscriptionUsageResponse['quota'],
-  // Since we are deprecation the `organizationsEnabled` key soon (use `organizationsLimit` instead), we exclude it from the quota keys for now to avoid confusion.
-  'organizationsEnabled'
+  // Drop once `@logto/cloud` no longer declares the legacy Actions quota key.
+  | 'inlineHooksEnabled'
+  // Since we are deprecating the `organizationsEnabled` key soon (use `organizationsLimit` instead), we exclude it from the quota keys for now to avoid confusion.
+  | 'organizationsEnabled'
 >;
+
+export type LogtoSkuResponse = Omit<
+  GetArrayElementType<GuardedResponse<GetRoutes['/api/skus']>>,
+  'quota'
+> & {
+  // Drop the legacy key once `@logto/cloud` stops declaring it on SKU quotas.
+  quota: Omit<
+    GetArrayElementType<GuardedResponse<GetRoutes['/api/skus']>>['quota'],
+    'inlineHooksEnabled'
+  >;
+};
 
 export type SubscriptionCountBasedUsage = Omit<
   SubscriptionUsageResponse['usage'],
-  // Since we are deprecation the `organizationsEnabled` key soon (use `organizationsLimit` instead), we exclude it from the usage keys for now to avoid confusion.
-  'organizationsEnabled'
+  // Drop once `@logto/cloud` no longer declares the legacy Actions quota key.
+  | 'inlineHooksEnabled'
+  // Since we are deprecating the `organizationsEnabled` key soon (use `organizationsLimit` instead), we exclude it from the usage keys for now to avoid confusion.
+  | 'organizationsEnabled'
 >;
 export type SubscriptionResourceScopeUsage = SubscriptionUsageResponse['resources'];
 export type SubscriptionRoleScopeUsage = Omit<
   SubscriptionUsageResponse['roles'],
-  // Since we are deprecation the `organizationsEnabled` key soon (use `organizationsLimit` instead), we exclude it from the quota keys for now to avoid confusion.
+  // Since we are deprecating the `organizationsEnabled` key soon (use `organizationsLimit` instead), we exclude it from the quota keys for now to avoid confusion.
   'organizationsEnabled'
 >;
 

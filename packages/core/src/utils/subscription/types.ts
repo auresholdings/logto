@@ -11,14 +11,29 @@ type RouteResponseType<T extends { search?: unknown; body?: unknown; response?: 
 type RouteRequestBodyType<T extends { search?: unknown; body?: ZodType; response?: unknown }> =
   z.infer<NonNullable<T['body']>>;
 
+type CompleteSubscription = RouteResponseType<GetRoutes['/api/tenants/my/subscription']>;
+type CompleteSubscriptionUsage = RouteResponseType<GetRoutes['/api/tenants/my/subscription-usage']>;
+
+export const actionQuotaKey = 'actionsEnabled' satisfies keyof CompleteSubscription['quota'];
+
+export type SubscriptionQuota = Omit<
+  CompleteSubscriptionUsage['quota'],
+  | 'auditLogsRetentionDays'
+  // Drop once `@logto/cloud` no longer declares the legacy Actions quota key.
+  | 'inlineHooksEnabled'
+  // Since we are deprecating the `organizationsEnabled` key soon (use `organizationsLimit` instead), we exclude it from the usage keys for now to avoid confusion.
+  | 'organizationsEnabled'
+>;
+
 /**
  * The subscription data is fetched from the Cloud API.
  * All the dates are in ISO 8601 format, we need to manually fix the type to string here.
  */
 export type Subscription = Omit<
-  RouteResponseType<GetRoutes['/api/tenants/my/subscription']>,
+  CompleteSubscription,
   | 'currentPeriodStart'
   | 'currentPeriodEnd'
+  | 'quota'
   /**
    * Temporarily omit `quotaScope` for backward compatibility.
    * When we require this field, implement the related logic here.
@@ -28,30 +43,20 @@ export type Subscription = Omit<
 > & {
   currentPeriodStart: string;
   currentPeriodEnd: string;
+  quota: SubscriptionQuota;
 };
-
-type CompleteSubscriptionUsage = RouteResponseType<GetRoutes['/api/tenants/my/subscription-usage']>;
-
-/**
- * @remarks
- * The `auditLogsRetentionDays` will be handled by cron job in Azure Functions, outdated audit logs will be removed automatically.
- */
-export type SubscriptionQuota = Omit<
-  CompleteSubscriptionUsage['quota'],
-  | 'auditLogsRetentionDays'
-  // Since we are deprecation the `organizationsEnabled` key soon (use `organizationsLimit` instead), we exclude it from the usage keys for now to avoid confusion.
-  | 'organizationsEnabled'
->;
 
 export type SubscriptionUsage = Omit<
   CompleteSubscriptionUsage['usage'],
-  // Since we are deprecation the `organizationsEnabled` key soon (use `organizationsLimit` instead), we exclude it from the usage keys for now to avoid confusion.
-  'organizationsEnabled'
+  // Drop once `@logto/cloud` no longer declares the legacy Actions quota key.
+  | 'inlineHooksEnabled'
+  // Since we are deprecating the `organizationsEnabled` key soon (use `organizationsLimit` instead), we exclude it from the usage keys for now to avoid confusion.
+  | 'organizationsEnabled'
 >;
 
 export type ReportSubscriptionUpdatesUsageKey = Exclude<
   RouteRequestBodyType<PostRoutes['/api/tenants/my/subscription/item-updates']>['usageKey'],
-  // Since we are deprecation the `organizationsEnabled` key soon (use `organizationsLimit` instead), we exclude it from the usage keys for now to avoid confusion.
+  // Since we are deprecating the `organizationsEnabled` key soon (use `organizationsLimit` instead), we exclude it from the usage keys for now to avoid confusion.
   'organizationsEnabled'
 >;
 
@@ -102,11 +107,14 @@ const logtoSkuQuotaGuard = z.object({
   hooksLimit: z.number().nullable(),
   auditLogsRetentionDays: z.number().nullable(),
   customJwtEnabled: z.boolean(),
+  actionsEnabled: z.boolean(),
   subjectTokenEnabled: z.boolean(),
   bringYourUiEnabled: z.boolean(),
   collectUserProfileEnabled: z.boolean(),
   passkeySignInEnabled: z.boolean(),
   tokenLimit: z.number().nullable(),
+  hostedEmailLimit: z.number().nullable(),
+  hostedEmailDailyLimit: z.number().nullable(),
   machineToMachineLimit: z.number().nullable(),
   resourcesLimit: z.number().nullable(),
   enterpriseSsoLimit: z.number().nullable(),
@@ -158,6 +166,9 @@ export const subscriptionCacheGuard = z.object({
   currentPeriodStart: z.string(),
   currentPeriodEnd: z.string(),
   isEnterprisePlan: z.boolean(),
+  // Optional so cache entries written before Cloud started returning `isDevPlan` still parse; the
+  // field is otherwise always present. Kept so a cached read preserves it for the hosted-email guard.
+  isDevPlan: z.boolean().optional(),
   status: subscriptionStatusGuard,
   upcomingInvoice: upcomingInvoiceGuard.nullable().optional(),
   quota: logtoSkuQuotaGuard,

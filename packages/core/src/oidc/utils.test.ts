@@ -19,6 +19,15 @@ import {
 } from './utils.js';
 
 describe('getConstantClientMetadata()', () => {
+  it('requires auth_time only for SAML clients', () => {
+    expect(getConstantClientMetadata(mockEnvSet, ApplicationType.SAML).require_auth_time).toBe(
+      true
+    );
+    expect(
+      getConstantClientMetadata(mockEnvSet, ApplicationType.Traditional).require_auth_time
+    ).toBeUndefined();
+  });
+
   it('should return correct metadata for SPA', () => {
     expect(getConstantClientMetadata(mockEnvSet, ApplicationType.SPA)).toMatchObject({
       application_type: 'web',
@@ -394,6 +403,21 @@ describe('buildLoginPromptUrl', () => {
     expect(
       buildLoginPromptUrl({ one_time_token: 'token_value', login_hint: 'user@mail.com' })
     ).toBe('sign-in?one_time_token=token_value&login_hint=user%40mail.com');
+
+    expect(
+      buildLoginPromptUrl({
+        first_screen: FirstScreen.ResetPassword,
+        one_time_token: 'token_value',
+      })
+    ).toBe('reset-password?one_time_token=token_value');
+
+    expect(
+      buildLoginPromptUrl({
+        first_screen: FirstScreen.ResetPassword,
+        one_time_token: 'token_value',
+        login_hint: 'user@mail.com',
+      })
+    ).toBe('reset-password?one_time_token=token_value&login_hint=user%40mail.com');
   });
 
   it('should append shared experience params to the url', () => {

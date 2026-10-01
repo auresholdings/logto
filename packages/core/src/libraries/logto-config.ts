@@ -1,18 +1,28 @@
+import crypto from 'node:crypto';
+
 import type {
   CloudConnectionData,
   IdTokenConfig,
+  ActionType,
   JwtCustomizerType,
   LogtoOidcConfigType,
+  OidcConfigKey,
+  OidcConfigKeysResponse,
+  OidcPrivateKey,
 } from '@logto/schemas';
 import {
   LogtoConfigs,
+  LogtoActionKey,
   LogtoJwtTokenKey,
   LogtoOidcConfigKey,
+  OidcSigningKeyStatus,
   cloudApiIndicator,
   cloudConnectionDataGuard,
   normalizeOidcPrivateKeys,
+  oidcConfigKeysResponseGuard,
   rotateOidcPrivateKeyStatuses,
   idTokenConfigGuard,
+  actionConfigGuard,
   jwtCustomizerConfigGuard,
   logtoOidcConfigGuard,
 } from '@logto/schemas';
@@ -23,6 +33,7 @@ import { ZodError, z } from 'zod';
 import RequestError from '#src/errors/RequestError/index.js';
 import { createLogtoConfigQueries } from '#src/queries/logto-config.js';
 import type Queries from '#src/tenants/Queries.js';
+import { exportJWK } from '#src/utils/jwks.js';
 
 export type LogtoConfigLibrary = ReturnType<typeof createLogtoConfigLibrary>;
 
@@ -31,7 +42,9 @@ export const createLogtoConfigLibrary = ({
     getRowsByKeys,
     getCloudConnectionData: queryCloudConnectionData,
     upsertJwtCustomizer: queryUpsertJwtCustomizer,
+    upsertAction: queryUpsertAction,
     upsertIdTokenConfig: queryUpsertIdTokenConfig,
+    getSigningKeyRotationState,
   },
   pool,
   wellKnownCache,
@@ -147,9 +160,106 @@ export const createLogtoConfigLibrary = ({
     return updatedRow.value;
   };
 
+  const upsertAction = async <T extends LogtoActionKey>(key: T, value: ActionType[T]) => {
+    const { value: rawValue } = await queryUpsertAction(key, value);
+
+    return {
+      key,
+      value: actionConfigGuard[key].parse(rawValue),
+    };
+  };
+
+  const getAction = async <T extends LogtoActionKey>(key: T) => {
+    const { rows } = await getRowsByKeys([key]);
+
+    if (rows.length === 0) {
+      throw new RequestError({
+        code: 'entity.not_exists_with_id',
+        name: LogtoConfigs.tableSingular,
+        id: key,
+        status: 404,
+      });
+    }
+
+    return z.object({ value: actionConfigGuard[key] }).parse(rows[0]).value;
+  };
+
+  const getActions = async (consoleLog: ConsoleLog): Promise<Partial<ActionType>> => {
+    try {
+      const { rows } = await getRowsByKeys(Object.values(LogtoActionKey));
+
+      return z
+        .object(actionConfigGuard)
+        .partial()
+        .parse(Object.fromEntries(rows.map(({ key, value }) => [key, value])));
+    } catch (error: unknown) {
+      if (error instanceof ZodError) {
+        consoleLog.error(
+          error.issues
+            .map(({ message, path }) => `${message} at ${chalk.green(path.join('.'))}`)
+            .join('\n')
+        );
+      } else {
+        consoleLog.error(error);
+      }
+
+      throw new Error('Failed to get actions');
+    }
+  };
+
+  const updateAction = async <T extends LogtoActionKey>(
+    key: T,
+    value: Partial<ActionType[T]>
+  ): Promise<ActionType[T]> => {
+    const originValue = await getAction(key);
+    const result = actionConfigGuard[key].parse({ ...originValue, ...value });
+    const updatedRow = await upsertAction(key, result);
+    return updatedRow.value;
+  };
+
   const upsertIdTokenConfig = async (idTokenConfig: IdTokenConfig) => {
     const { value } = await queryUpsertIdTokenConfig(idTokenConfig);
     return idTokenConfigGuard.parse(value);
+  };
+
+  /**
+   * Remove key material before returning OIDC keys through the management API.
+   * For private signing keys, also attach the scheduled effective time from the
+   * persisted rotation state to the staged Next key.
+   */
+  const getRedactedOidcKeyResponse = async (
+    type: LogtoOidcConfigKey,
+    keys: Array<OidcConfigKey | OidcPrivateKey>
+  ): Promise<OidcConfigKeysResponse[]> => {
+    const signingKeyRotationState =
+      type === LogtoOidcConfigKey.PrivateKeys ? await getSigningKeyRotationState() : undefined;
+
+    return Promise.all(
+      keys.map(async ({ id, value, createdAt, ...rest }) => {
+        if (type === LogtoOidcConfigKey.PrivateKeys) {
+          const jwk = await exportJWK(crypto.createPrivateKey(value));
+          const status = 'status' in rest ? rest.status : undefined;
+          const parseResult = oidcConfigKeysResponseGuard.safeParse({
+            id,
+            createdAt,
+            effectiveAt:
+              status === OidcSigningKeyStatus.Next
+                ? signingKeyRotationState?.signingKeyRotationAt
+                : undefined,
+            signingKeyAlgorithm: jwk.kty,
+            status,
+          });
+
+          if (!parseResult.success) {
+            throw new RequestError({ code: 'request.general', status: 422 });
+          }
+
+          return parseResult.data;
+        }
+
+        return { id, createdAt };
+      })
+    );
   };
 
   /**
@@ -157,6 +267,18 @@ export const createLogtoConfigLibrary = ({
    * This function is intended to be called before accessing OIDC configs to ensure the key statuses are up-to-date.
    */
   const promoteScheduledSigningKeyRotation = async () => {
+    // Lock-free pre-check so the common bootstrap path skips the `FOR UPDATE` transaction below.
+    // Safe because staged rotations are always scheduled in the future, and the authoritative
+    // check + mutation still runs under the lock.
+    const scheduledRotationState = await getSigningKeyRotationState();
+
+    if (
+      !scheduledRotationState?.signingKeyRotationAt ||
+      scheduledRotationState.signingKeyRotationAt > Date.now()
+    ) {
+      return;
+    }
+
     await pool.transaction(async (connection) => {
       const transactionalQueries = createLogtoConfigQueries(connection, wellKnownCache);
       await transactionalQueries.lockPrivateSigningKeysAndRotationState();
@@ -186,7 +308,12 @@ export const createLogtoConfigLibrary = ({
     getJwtCustomizer,
     getJwtCustomizers,
     updateJwtCustomizer,
+    upsertAction,
+    getAction,
+    getActions,
+    updateAction,
     upsertIdTokenConfig,
+    getRedactedOidcKeyResponse,
     promoteScheduledSigningKeyRotation,
   };
 };

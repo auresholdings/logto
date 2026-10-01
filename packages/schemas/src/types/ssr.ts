@@ -1,5 +1,7 @@
 import { type LocalePhrase } from '@logto/phrases-experience';
 
+import { type SignInExperience } from '../db-entries/index.js';
+
 import { type FullSignInExperience } from './sign-in-experience.js';
 
 /**
@@ -17,6 +19,18 @@ export type SsrData = {
   phrases: {
     lng: string;
     data: LocalePhrase;
+  };
+};
+
+/**
+ * The server-side rendering data type for **account center**. Only sign-in experience color/theme
+ * data is needed for theme flash prevention.
+ */
+export type AccountCenterSsrSignInExperience = Pick<SignInExperience, 'color'>;
+
+export type AccountCenterSsrData = {
+  signInExperience: {
+    data: AccountCenterSsrSignInExperience;
   };
 };
 

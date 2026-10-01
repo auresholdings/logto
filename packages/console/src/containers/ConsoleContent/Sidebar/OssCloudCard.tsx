@@ -9,10 +9,10 @@ import CloudIcon from '@/assets/icons/cloud-icon.svg?react';
 import ExternalLinkIcon from '@/assets/icons/external-link.svg?react';
 import { storageKeys } from '@/consts';
 import { isCloud, isDevFeaturesEnabled } from '@/consts/env';
-import { logtoCloudConsoleLink } from '@/consts/external-links';
 import IconButton from '@/ds-components/IconButton';
 import TextLink from '@/ds-components/TextLink';
 import useTheme from '@/hooks/use-theme';
+import { buildCloudUpsellUrl, buildSelfHostedPlansUrl, ossUpsellEntries } from '@/utils/oss-upsell';
 
 import {
   ossCloudSidebarCardDismissDuration,
@@ -31,6 +31,7 @@ function OssCloudCard() {
     keyPrefix: 'admin_console.get_started.oss_cloud.sidebar',
   });
   const { t: tGeneral } = useTranslation(undefined, { keyPrefix: 'admin_console.general' });
+  const { t: tUpsell } = useTranslation(undefined, { keyPrefix: 'admin_console.upsell' });
   const theme = useTheme();
   const CloudBannerIcon = icons[theme];
   const now = Date.now();
@@ -39,11 +40,12 @@ function OssCloudCard() {
       localStorage.getItem(storageKeys.ossSidebarCloudUpsellDismissedUntil)
     )
   );
+  const entry = ossUpsellEntries.ossSidebarCloudCard;
+  const cloudUpsellUrl = buildCloudUpsellUrl(entry);
 
   if (
     !shouldShowOssCloudSidebarCard({
       isCloud,
-      isDevFeaturesEnabled,
       dismissedUntil,
       now,
     })
@@ -84,11 +86,20 @@ function OssCloudCard() {
         <TextLink
           isTrailingIcon
           className={styles.link}
-          href={logtoCloudConsoleLink}
+          href={cloudUpsellUrl}
           icon={<ExternalLinkIcon className={styles.linkIcon} />}
           targetBlank="noopener"
         >
           {tSidebar('action')}
+        </TextLink>
+        <TextLink
+          isTrailingIcon
+          className={classNames(styles.link, styles.secondaryLink)}
+          href={buildSelfHostedPlansUrl(entry)}
+          icon={<ExternalLinkIcon className={styles.linkIcon} />}
+          targetBlank="noopener"
+        >
+          {tUpsell('explore_self_hosted_plans')}
         </TextLink>
       </div>
     </div>
