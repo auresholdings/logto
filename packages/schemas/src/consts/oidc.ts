@@ -82,9 +82,13 @@ export enum ExtraParamsKey {
    */
   BackUrl = 'back_url',
   /**
-   * Force the sign-in experience theme (`light` or `dark`), overriding the
-   * user's system `prefers-color-scheme`. Lets the calling app keep its own
-   * theme toggle in sync with the auth screen.
+   * Overrides the theme that the sign-in experience would otherwise resolve from the end-user's
+   * OS settings, so an application with its own light / dark toggle can keep Logto in sync.
+   *
+   * The parameter is ignored when dark mode is disabled in the sign-in experience configuration,
+   * and an unrecognized value is ignored without affecting the other parameters.
+   *
+   * The available values are `light` and `dark`.
    */
   Theme = 'theme',
 }

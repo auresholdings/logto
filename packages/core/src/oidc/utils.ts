@@ -16,11 +16,14 @@ import {
   FirstScreen,
   experience,
   loginPromptAuthenticationContextDetailsGuard,
+  Theme,
 } from '@logto/schemas';
 import { condArray, conditional, removeUndefinedKeys, trySafe } from '@silverhand/essentials';
 import { type AllClientMetadata, type ClientAuthMethod, errors } from 'oidc-provider';
 
 import type { EnvSet } from '#src/env-set/index.js';
+
+import { escapeRegExp, getEffectivePort } from './redirect-uri/utils.js';
 
 /**
  * Build constant client metadata for an application based on its type and optional flags.
@@ -151,28 +154,6 @@ export const isOriginAllowed = (
   return false;
 };
 
-const getEffectivePort = (protocol: string, port: string) => {
-  if (port) {
-    return port;
-  }
-
-  switch (protocol) {
-    case 'http:': {
-      return '80';
-    }
-
-    case 'https:': {
-      return '443';
-    }
-
-    default: {
-      return '';
-    }
-  }
-};
-
-const escapeRegExp = (value: string) => value.replaceAll(/[$()*+.?[\\\]^{|}]/g, '\\$&');
-
 const matchHostnameLabel = (pattern: string, actual: string) => {
   if (!pattern.includes('*')) {
     return pattern === actual;
@@ -275,6 +256,7 @@ export type SharedExperienceParams = Readonly<{
   appId?: string;
   organizationId?: string;
   uiLocales?: string;
+  theme?: Theme;
 }>;
 
 /**
@@ -285,6 +267,10 @@ export type SharedExperienceParams = Readonly<{
 export const readOptionalQueryString = (value: unknown): string | undefined =>
   typeof value === 'string' && value.length > 0 ? value : undefined;
 
+/** Read a query value as a supported {@link Theme}, ignoring anything else. */
+export const readOptionalTheme = (value: unknown): Theme | undefined =>
+  value === Theme.Light || value === Theme.Dark ? value : undefined;
+
 export const parseSharedExperienceParams = (
   source: Record<string, unknown>
 ): SharedExperienceParams =>
@@ -292,6 +278,7 @@ export const parseSharedExperienceParams = (
     appId: readOptionalQueryString(source.app_id),
     organizationId: readOptionalQueryString(source.organization_id),
     uiLocales: readOptionalQueryString(source.ui_locales),
+    theme: readOptionalTheme(source.theme),
   });
 
 /**
@@ -326,11 +313,13 @@ export const buildSharedExperienceCookie = ({
   appId,
   organizationId,
   uiLocales,
+  theme,
 }: SharedExperienceParams): LogtoUiCookie =>
   removeUndefinedKeys({
     appId,
     organizationId,
     uiLocales,
+    theme,
   });
 
 /**
@@ -400,9 +389,7 @@ export const buildLoginPromptUrl = (
   appendExtraParam(ExtraParamsKey.OneTimeToken);
   appendExtraParam(ExtraParamsKey.LoginHint);
   appendExtraParam(ExtraParamsKey.Identifier);
-  appendExtraParam(ExtraParamsKey.UiLocales);
   appendExtraParam(ExtraParamsKey.BackUrl);
-  appendExtraParam(ExtraParamsKey.Theme);
 
   // Reuse DirectSignIn page to handle Google One Tap credential.
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing

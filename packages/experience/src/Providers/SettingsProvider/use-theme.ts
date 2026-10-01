@@ -2,7 +2,7 @@ import { Theme } from '@logto/schemas';
 import { useEffect, useContext } from 'react';
 
 import PageContext from '@/Providers/PageContextProvider/PageContext';
-import { searchKeys } from '@/shared/utils/search-parameters';
+import { getThemeOverride } from '@/shared/utils/theme';
 
 const prefersDarkSchemeQuery = '(prefers-color-scheme: dark)';
 
@@ -18,47 +18,30 @@ export const getThemeBySystemConfiguration = (): Theme =>
   getDarkThemeWatchMedia()?.matches ? Theme.Dark : Theme.Light;
 
 /**
- * Read a forced theme override (`light` | `dark`) from session storage,
- * populated by the `theme` query parameter. Returns `undefined` if not set
- * or if the value is unrecognized — in that case the system preference is used.
+ * The theme to render with when dark mode is enabled: the override wins over the end-user's OS
+ * settings, so an application with its own light / dark toggle stays in sync.
  */
-export const getThemeOverride = (): Theme | undefined => {
-  if (typeof window === 'undefined') {
-    return undefined;
-  }
-  const value = sessionStorage.getItem(searchKeys.theme);
-  if (value === Theme.Dark || value === Theme.Light) {
-    return value;
-  }
-  return undefined;
-};
+export const getPreferredTheme = (): Theme => getThemeOverride() ?? getThemeBySystemConfiguration();
 
 export default function useTheme() {
   const { isPreview, experienceSettings, setTheme } = useContext(PageContext);
 
   useEffect(() => {
-    // An explicit `theme` query param wins regardless of admin Dark mode setting.
-    const override = getThemeOverride();
-    if (override) {
-      setTheme(override);
+    if (!experienceSettings?.color.isDarkModeEnabled) {
       return;
     }
 
-    if (!experienceSettings?.color.isDarkModeEnabled) {
+    setTheme(getPreferredTheme());
+
+    const darkThemeWatchMedia = getThemeOverride() ? undefined : getDarkThemeWatchMedia();
+
+    if (!darkThemeWatchMedia) {
       return;
     }
 
     const changeTheme = () => {
       setTheme(getThemeBySystemConfiguration());
     };
-
-    changeTheme();
-
-    const darkThemeWatchMedia = getDarkThemeWatchMedia();
-
-    if (!darkThemeWatchMedia) {
-      return;
-    }
 
     darkThemeWatchMedia.addEventListener('change', changeTheme);
 
